@@ -127,19 +127,35 @@ const map = {
     },
 };
 
-function getSelectionText() {
-    var text = "";
-    if (window.getSelection) {
-        text = window.getSelection().toString();
-    } else if (document.selection && document.selection.type != "Control") {
-        text = document.selection.createRange().text;
+function detect(text) {
+    //Dictionary for Unicode range of the languages
+    var langdic = {
+        "arabic" : /[\u0600-\u06FF]/,
+        "persian" : /[\u0750-\u077F]/,
+        "he" : /[\u0590-\u05FF]/,
+        "Syriac" : /[\u0700-\u074F]/,
+        "Bengali" : /[\u0980-\u09FF]/,
+        "Ethiopic" : /[\u1200-\u137F]/,
+        "Greek and Coptic" : /[\u0370-\u03FF]/,
+        "Georgian" : /[\u10A0-\u10FF]/,
+        "Thai" : /[\u0E00-\u0E7F]/,
+        "en" : /^[a-zA-Z ,]+/
+        //add other languages her
     }
-    return text;
+    //const keys = Object.keys(langdic); //read  keys
+    //const keys = Object.values(langdic); //read  values
+    const keys = Object.entries(langdic); // read  keys and values from the dictionary
+    let key;
+    Object.entries(langdic).forEach(([k, value]) => {  // loop to read all the dictionary items if not true
+        if (value.test(text)){   //Check Unicode to see which one is true
+            key = k;
+        }
+    });
+    return key;
 }
 
-function flip() {
-    const codes = map[navigator.language][prompt('lang?')];
-    const selected = getSelectionText();
+function flip(selected, lang) {
+    const codes = map[detect(selected)][lang];
     let text = '';
     for (let i = 0; i < selected.length; i++) {
         if (selected[i] === ' ') {
@@ -151,14 +167,29 @@ function flip() {
     return text
 }
 
+function replace(element, older, newer) {
+    if (element.textContent === older) {
+        element.textContent = newer;
+        return true;
+    }
+    if (element.value === older) {
+        element.value = newer;
+        return true;
+    }
+    for (const child of element.children) {
+        if (replace(child, older, newer)) {
+            return true;
+        }
+    }
+}
+
 //This event listener will determine if the context menu should be updated
 //based on if the right-button was clicked and if there is a selection or not
 document.addEventListener("mousedown", function(event){
     if (event.button !== 2) {
         return false;
     }
-    debugger;
-    var selected = getSelectionText();
+    var selected = window.getSelection().toString();
     if(event.button == 2 && selected != '') {
         //get selected text and send request to bkgd page to create menu
         chrome.runtime.sendMessage({
@@ -173,6 +204,8 @@ document.addEventListener("mousedown", function(event){
 
 chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
     if (msg.action == 'open_dialog_box') {
-        console.log(flip());
+        const selected = window.getSelection();
+        const text = flip(selected.toString(), msg.lang);
+        replace(selected.anchorNode, selected.toString(), text)
     }
 });

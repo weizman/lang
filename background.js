@@ -2,18 +2,18 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.message == 'updateContextMenu') {
         if (request.selection) {
-            chrome.contextMenus.update('contextMenuId',{
-                'title': 'New Title 1',
+            navigator.languages.forEach(l => chrome.contextMenus.update('contextMenuId-' + l,{
+                'title': 'Switch to ' + l,
                 'enabled': true,
                 "contexts": ["all"],
                 'onclick': () => {
                     chrome.tabs.query({active: true, currentWindow: true},function(tabs) {
-                        chrome.tabs.sendMessage(tabs[0].id, {action:'open_dialog_box'}, function(response) {
+                        chrome.tabs.sendMessage(tabs[0].id, {action:'open_dialog_box', lang: l}, function(response) {
                             console.log(response);
                         });
                     });
                 }
-            });
+            }));
         } else {
             chrome.contextMenus.update('contextMenuId',{
                 'title': 'Select some text first',
@@ -26,11 +26,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 });
 
-//The original context menu.  The important property is the id.  The rest is mostly
-//arbitrary because it will be changed dynamically by the listener above.
-chrome.contextMenus.create({
-    'id': 'contextMenuId',
+navigator.languages.forEach(l => chrome.contextMenus.create({
+    'id': 'contextMenuId-' + l,
     'enabled': false,
-    'title': 'Some Title',
+    'title': 'Switch to ' + l,
     "contexts": ["all"]
-});
+}));
